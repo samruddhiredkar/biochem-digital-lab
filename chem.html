@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioChem Digital Lab 3D</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://3dmol.org/build/3Dmol-min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --bg-panel: #1e1e2e;
+            --text-main: #e0e0e0;
+            --accent-1: #00f2fe; /* Cyan */
+            --accent-2: #4facfe; /* Blue */
+            --accent-3: #ff007f; /* Magenta */
+            --gradient-main: linear-gradient(135deg, var(--accent-2), var(--accent-1));
+        }
+
+        body { 
+            background-color: var(--bg-dark); 
+            color: var(--text-main);
+            font-family: 'Poppins', sans-serif; 
+            margin: 0; padding: 0;
+        }
+
+        /* Highly colorful Gradient Header */
+        .header-section {
+            background: linear-gradient(135deg, #ff0080, #7928ca, #ff007f, #00f2fe);
+            background-size: 300% 300%;
+            animation: gradientBG 10s ease infinite;
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 25px;
+            border-radius: 0 0 30px 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .header-section h1 {
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+        }
+
+        /* 3D Viewer styles */
+        .viewer-container {
+            height: 60vh;
+            width: 100%;
+            position: relative;
+            background: #ffffff; /* Contrast white for the molecule */
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border: 4px solid #fff;
+            overflow: hidden;
+            transition: border-color 0.3s ease;
+        }
+        
+        .viewer-container.loading {
+            border-color: var(--accent-1);
+        }
+
+        /* Dark Panel for Controls */
+        .control-panel {
+            background: var(--bg-panel);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .control-panel h5 {
+            color: white;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .control-panel h5:first-of-type { margin-top: 0; }
+
+        /* Customizing Form inputs for dark theme */
+        .form-control, .form-select {
+            background-color: #2a2a40;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #31314d;
+            border-color: var(--accent-1);
+            color: white;
+            box-shadow: 0 0 8px rgba(0,242,254,0.3);
+        }
+
+        /* Vivid Gradient Button */
+        .btn-gradient {
+            background: var(--gradient-main);
+            border: none;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-gradient:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,242,254,0.4);
+        }
+
+        /* Colorful Switch */
+        .form-check-input:checked {
+            background-color: var(--accent-3);
+            border-color: var(--accent-3);
+        }
+    </style>
+</head>
+<body>
+
+<div class="header-section text-center">
+    <h1><span style="color:var(--accent-1)">Bio</span>Chem Digital Lab</h1>
+    <p>3D Molecular Viz | WebGL Power</p>
+</div>
+
+<div class="container pb-5">
+    <div class="row">
+        
+        <div class="col-md-8 mb-4">
+            <div id="container-01" class="viewer-container"></div>
+            <div class="text-center mt-2 text-muted small">
+                Rotate: Mouse | Zoom: Scroll | Pan: Right-Click
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="control-panel">
+                <h5>Search Database</h5>
+                <div class="input-group mb-3">
+                    <input type="text" id="molName" class="form-control" placeholder="Molecule (e.g., DNA, Aspirin)" value="Benzene">
+                    <button class="btn btn-gradient" onclick="loadMolecule()">Render</button>
+                </div>
+                
+                <div id="statusMsg" class="mt-2 small text-center" style="min-height: 20px;"></div>
+
+                <hr style="border-color: rgba(255,255,255,0.1)">
+
+                <h5>View Settings</h5>
+                <select id="molStyle" class="form-select mb-3" onchange="updateStyle()">
+                    <option value="ballAndStick">Standard: Ball & Stick</option>
+                    <option value="stick">Bonds: Stick</option>
+                    <option value="sphere">Volume: Space Fill</option>
+                    <option value="line">Wireframe: Line</option>
+                </select>
+
+                <div class="form-check form-switch mt-3">
+                    <input class="form-check-input" type="checkbox" id="showSurface" onchange="updateStyle()">
+                    <label class="form-check-label text-white-50">Toggle Electron Cloud (Surface)</label>
+                </div>
+                
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" id="spinMol" onchange="updateStyle()">
+                    <label class="form-check-label text-white-50">Auto-Rotate</label>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    let viewer = null;
+    let currentModel = null;
+
+    $(document).ready(function() {
+        // Initialize the 3D viewer on page load
+        let element = $('#container-01');
+        // Setting a light background so atom colors pop
+        let config = { backgroundColor: '#ffffff' }; 
+        viewer = $3Dmol.createViewer(element, config);
+        loadMolecule(); // Load the default molecule
+    });
+
+    function loadMolecule() {
+        const name = document.getElementById('molName').value;
+        const status = document.getElementById('statusMsg');
+        const viewerDiv = document.getElementById('container-01');
+        
+        if(!name) return;
+
+        status.innerHTML = `<span style="color:var(--accent-1)">⏳ Fetching from PubChem...</span>`;
+        viewerDiv.classList.add('loading');
+
+        // PubChem REST API URL for 3D coordinates (SDF format)
+        const url = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${name}/SDF?record_type=3d`;
+
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error("Molecule not found in database.");
+                return response.text();
+            })
+            .then(data => {
+                viewer.clear(); // Wipe previous molecule
+                currentModel = viewer.addModel(data, "sdf");
+                updateStyle(); // Apply chosen style settings
+                viewer.zoomTo(); // Center and focus the view
+                viewer.render();
+                status.innerHTML = `<span class="text-success">✅ Loaded ${name}</span>`;
+                viewerDiv.classList.remove('loading');
+            })
+            .catch(err => {
+                status.innerHTML = `<span class="text-danger">❌ Error: ${err.message}</span>`;
+                viewerDiv.classList.remove('loading');
+            });
+    }
+
+    function updateStyle() {
+        if (!viewer || !currentModel) return;
+
+        const styleType = document.getElementById('molStyle').value;
+        const showSurface = document.getElementById('showSurface').checked;
+        const autoSpin = document.getElementById('spinMol').checked;
+        
+        // Define rendering based on dropdown selection
+        let styleConfig = {};
+        if (styleType === 'stick') styleConfig = { stick: { radius: 0.15 } };
+        else if (styleType === 'sphere') styleConfig = { sphere: { scale: 1.0 } };
+        else if (styleType === 'ballAndStick') styleConfig = { stick: { radius: 0.15 }, sphere: { scale: 0.3 } };
+        else if (styleType === 'line') styleConfig = { line: {} };
+
+        // Apply style to all atoms/bonds
+        viewer.setStyle({}, styleConfig);
+
+        // Handle the Electron Density Surface (Van der Waals)
+        viewer.removeAllSurfaces(); // Clear existing
+        if (showSurface) {
+            // Using a semi-transparent colorful surface
+            viewer.addSurface($3Dmol.SurfaceType.VDW, { 
+                opacity: 0.6, 
+                color: 'var(--accent-2)' // Using our main colorful blue for the cloud
+            });
+        }
+        
+        // Handle Auto-Spin
+        if(autoSpin) {
+            viewer.spin(true);
+        } else {
+            viewer.spin(false);
+        }
+
+        viewer.render(); // Re-draw with new settings
+    }
+</script>
+
+</body>
+</html>
